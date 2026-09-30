@@ -1,0 +1,90 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+description: Compare Google Antigravity SDK skill versions (bigquery-cost-check v1 vs v2)
+
+prompts:
+  - |
+    Use the bigquery-cost-check skill to review this SQL query:
+
+    ```sql
+    {{ sql_query }}
+    ```
+
+    Return JSON with this shape:
+    {
+      "summary": "one sentence summary",
+      "issues": [{"id": "select-star|missing-partition-filter|unbounded-self-join", "severity": "high|medium|low"}]
+    }
+
+x-review-schema: &reviewSchema
+  type: object
+  required: [summary, issues]
+  additionalProperties: false
+  properties:
+    summary:
+      type: string
+    issues:
+      type: array
+      items:
+        type: object
+        required: [id, severity]
+        additionalProperties: false
+        properties:
+          id:
+            type: string
+          severity:
+            type: string
+            enum: [high, medium, low]
+
+x-antigravity-config: &antigravityConfig
+  model: gemini-2.5-pro
+  sandbox_mode: read-only
+  isolate_app_data: true
+  output_schema: *reviewSchema
+
+providers:
+  - id: google:antigravity-sdk
+    label: bigquery-cost-check-v1
+    config:
+      <<: *antigravityConfig
+      skills_paths:
+        - ./skills-v1
+
+  - id: google:antigravity-sdk
+    label: bigquery-cost-check-v2
+    config:
+      <<: *antigravityConfig
+      skills_paths:
+        - ./skills-v2
+
+defaultTest:
+  options:
+    disableVarExpansion: true
+  assert:
+    - type: skill-used
+      value: bigquery-cost-check
+
+    - type: javascript
+      threshold: 0.75
+      value: |
+        const result = JSON.parse(output);
+        const expected = context.vars.expectedIssues;
+        const found = (result.issues || []).map((issue) => issue.id);
+        const hits = expected.filter((id) => found.includes(id));
+        const recall = hits.length / expected.length;
+
+        return {
+          pass: recall === 1,
+          score: recall,
+          reason: `Matched ${hits.length}/${expected.length} expected cost issues (${hits.join(', ') || 'none'})`,
+        };
+
+tests:
+  - description: Detects both SELECT * and missing partition filter on partitioned events table
+    vars:
+      sql_query: |
+        SELECT *
+        FROM `analytics.prod.events`
+        WHERE user_id = 'u_12345'
+      expectedIssues:
+        - select-star
+        - missing-partition-filter

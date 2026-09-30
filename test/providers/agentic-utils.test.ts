@@ -49,6 +49,8 @@ describe('agentic-utils', () => {
       'openai:codex-desktop',
       'anthropic:claude-agent-sdk',
       'anthropic:claude-code:sonnet',
+      'google:antigravity-sdk',
+      'google:antigravity:gemini-2.5-pro',
       'openinterpreter',
       'openinterpreter:gpt-5.4',
       'opencode',
@@ -65,6 +67,8 @@ describe('agentic-utils', () => {
     it('recognizes coding-agent runtimes that can return rubric grading verdicts', () => {
       expect(isAgenticGradingProvider(provider('openai:codex-sdk'))).toBe(true);
       expect(isAgenticGradingProvider(provider('anthropic:claude-agent-sdk'))).toBe(true);
+      expect(isAgenticGradingProvider(provider('google:antigravity-sdk'))).toBe(true);
+      expect(isAgenticGradingProvider(provider('google:antigravity:gemini-2.5-pro'))).toBe(true);
       expect(isAgenticGradingProvider(provider('openai:responses:gpt-5.5'))).toBe(false);
     });
 
