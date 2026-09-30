@@ -54,6 +54,18 @@ export const googleProviderFactories: ProviderFactory[] = [
     create: async (providerPath, providerOptions) => {
       const splits = providerPath.split(':');
 
+      if (
+        providerPath.startsWith('google:') &&
+        (splits[1] === 'antigravity-sdk' || splits[1] === 'antigravity')
+      ) {
+        const modelName = splits.slice(2).join(':');
+        const { AntigravitySDKProvider } = await import('../google/antigravity-sdk');
+        return new AntigravitySDKProvider(modelName, {
+          ...providerOptions,
+          id: providerPath,
+        });
+      }
+
       if (splits.length >= 3) {
         const serviceType = splits[1];
         const modelName = splits.slice(2).join(':');
